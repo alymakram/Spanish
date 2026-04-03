@@ -1,0 +1,19 @@
+{
+  "_note": "accountAssociation not required - Base App uses base.dev registration from April 2026",
+  "miniapp": {
+    "version": "1",
+    "name": "Traductor",
+    "homeUrl": "https://DOMAIN_PLACEHOLDER",
+    "iconUrl": "https://DOMAIN_PLACEHOLDER/icon.png",
+    "splashImageUrl": "https://DOMAIN_PLACEHOLDER/splash.png",
+    "splashBackgroundColor": "#1a0f05",
+    "subtitle": "English to Spanish on Base",
+    "description": "AI-powered English to Spanish translator. Every translation is logged permanently on Base blockchain. Includes community phrase book and Mini App Builder.",
+    "primaryCategory": "tools",
+    "tags": ["translator", "spanish", "english", "language", "base", "tools", "ai"],
+    "tagline": "Translate on-chain",
+    "ogTitle": "Traductor - English to Spanish on Base",
+    "ogDescription": "Translate English to Spanish. Every translation triggers a Base transaction.",
+    "ogImageUrl": "https://DOMAIN_PLACEHOLDER/og.png"
+  }
+}
