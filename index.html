@@ -1,0 +1,1127 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>Traductor -- English to Spanish on Base</title>
+<meta name="base:app_id" content="69d035124ea416dd93621af2"/>
+<meta name="description" content="Translate English to Spanish. Every translation is logged permanently on Base blockchain."/>
+<meta property="og:title" content="Traductor -- English to Spanish on Base"/>
+<meta property="og:description" content="AI-powered English to Spanish translator. Every translation triggers a Base transaction."/>
+<meta property="og:image" content="https://spanish-iota.vercel.app/og.png"/>
+<meta property="og:url" content="https://spanish-iota.vercel.app"/>
+<meta name="fc:miniapp" content='{"version":"1","name":"Traductor","iconUrl":"https://spanish-iota.vercel.app/icon.png","homeUrl":"https://spanish-iota.vercel.app","splashImageUrl":"https://spanish-iota.vercel.app/splash.png","splashBackgroundColor":"#1a0f05","buttonTitle":"Open Traductor"}' />
+
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;1,400&family=Fira+Code:wght@300;400;500&display=swap" rel="stylesheet"/>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/ethers/6.7.1/ethers.umd.min.js"></script>
+
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+
+:root{
+  --bg:#1a0f05;
+  --surface:#211408;
+  --surface2:#2a1a0a;
+  --border:#3d2410;
+  --border2:#5a3418;
+  --terra:#c4522a;
+  --terra2:#e06030;
+  --gold:#e8a020;
+  --gold2:#f5c040;
+  --cream:#f5e6c8;
+  --cream2:#fffaf0;
+  --olive:#4a5c2a;
+  --sand:#8b6a3a;
+  --muted:#5a3c20;
+  --green:#6ab04c;
+  --red:#e05040;
+  --radius:10px;
+  --mono:'Fira Code',monospace;
+  --serif:'Playfair Display',serif;
+}
+
+html,body{min-height:100%;background:var(--bg);color:var(--cream);font-family:var(--serif);overflow-x:hidden}
+
+/* warm paper texture */
+body::before{
+  content:'';position:fixed;inset:0;z-index:0;pointer-events:none;
+  background:
+    radial-gradient(ellipse at 20% 50%, rgba(196,82,42,.06) 0%, transparent 60%),
+    radial-gradient(ellipse at 80% 20%, rgba(232,160,32,.04) 0%, transparent 50%),
+    radial-gradient(ellipse at 60% 80%, rgba(74,92,42,.05) 0%, transparent 50%);
+}
+/* subtle grid */
+body::after{
+  content:'';position:fixed;inset:0;z-index:0;pointer-events:none;
+  background-image:linear-gradient(rgba(196,82,42,.03) 1px,transparent 1px),linear-gradient(90deg,rgba(196,82,42,.03) 1px,transparent 1px);
+  background-size:40px 40px;
+}
+
+#root{position:relative;z-index:1;min-height:100vh;display:flex;flex-direction:column}
+
+/* ---- Header ---- */
+header{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:16px 28px;
+  border-bottom:1px solid var(--border2);
+  background:rgba(26,15,5,.9);
+  backdrop-filter:blur(14px);
+  position:sticky;top:0;z-index:100;
+}
+.logo{
+  display:flex;align-items:center;gap:12px;
+}
+.logo-mark{
+  width:40px;height:40px;border-radius:50%;
+  border:2px solid var(--terra);
+  background:var(--surface2);
+  display:flex;align-items:center;justify-content:center;
+  font-family:var(--serif);font-size:.75rem;font-weight:700;
+  color:var(--terra);letter-spacing:.05em;
+}
+.logo-text{
+  font-family:var(--serif);font-size:1.5rem;font-weight:700;
+  color:var(--cream);letter-spacing:.02em;
+}
+.logo-text span{color:var(--terra);font-style:italic}
+.logo-sub{font-family:var(--mono);font-size:.58rem;color:var(--muted);letter-spacing:.12em;display:block;margin-top:-2px}
+
+#connectBtn{
+  font-family:var(--mono);font-size:.68rem;letter-spacing:.06em;
+  padding:9px 18px;border-radius:var(--radius);
+  border:1px solid var(--terra);
+  background:transparent;color:var(--terra);
+  cursor:pointer;transition:all .2s;
+}
+#connectBtn:hover{background:var(--terra);color:var(--cream)}
+#connectBtn.connected{border-color:var(--green);color:var(--green)}
+
+/* ---- Tabs ---- */
+.tabs{
+  display:flex;gap:2px;padding:18px 28px 0;
+  border-bottom:1px solid var(--border2);
+  background:rgba(26,15,5,.6);
+  flex-wrap:wrap;
+}
+.tab{
+  font-family:var(--mono);font-size:.68rem;letter-spacing:.1em;text-transform:uppercase;
+  padding:9px 16px;border-radius:var(--radius) var(--radius) 0 0;
+  border:1px solid transparent;border-bottom:none;
+  background:transparent;color:var(--muted);cursor:pointer;transition:all .2s;
+}
+.tab.active{
+  background:var(--surface);border-color:var(--border2);
+  color:var(--gold);border-bottom-color:var(--surface);
+  margin-bottom:-1px;z-index:1;
+}
+.tab:hover:not(.active){color:var(--cream)}
+
+.panel{display:none;padding:28px;flex:1;flex-direction:column;gap:22px}
+.panel.active{display:flex}
+
+/* ---- Cards ---- */
+.card{
+  background:var(--surface);
+  border:1px solid var(--border2);
+  border-radius:var(--radius);
+  padding:22px;
+  position:relative;overflow:hidden;
+}
+.card::after{
+  content:'';position:absolute;top:0;left:0;right:0;height:2px;
+  background:linear-gradient(90deg,transparent,var(--terra),var(--gold),transparent);
+  opacity:.4;
+}
+.card-title{
+  font-family:var(--mono);font-size:.6rem;letter-spacing:.2em;
+  text-transform:uppercase;color:var(--muted);margin-bottom:16px;
+  display:flex;align-items:center;gap:6px;
+}
+
+/* ---- Main Translator Layout ---- */
+.translator-grid{
+  display:grid;
+  grid-template-columns:1fr auto 1fr;
+  gap:0;
+  max-width:1000px;
+  background:var(--surface);
+  border:1px solid var(--border2);
+  border-radius:var(--radius);
+  overflow:hidden;
+}
+@media(max-width:700px){
+  .translator-grid{grid-template-columns:1fr;grid-template-rows:auto auto auto}
+}
+
+.lang-panel{padding:22px;display:flex;flex-direction:column;gap:0}
+.lang-panel.left{border-right:1px solid var(--border2)}
+@media(max-width:700px){
+  .lang-panel.left{border-right:none;border-bottom:1px solid var(--border2)}
+}
+
+.lang-header{
+  display:flex;align-items:center;justify-content:space-between;
+  margin-bottom:14px;
+}
+.lang-badge{
+  font-family:var(--serif);font-size:1rem;font-weight:700;
+  padding:5px 14px;border-radius:99px;
+  letter-spacing:.08em;
+}
+.lang-badge.en{background:rgba(196,82,42,.15);border:1px solid var(--terra);color:var(--terra)}
+.lang-badge.es{background:rgba(232,160,32,.15);border:1px solid var(--gold);color:var(--gold)}
+
+.lang-name{font-family:var(--mono);font-size:.62rem;color:var(--muted);letter-spacing:.1em}
+
+.text-area{
+  width:100%;min-height:180px;
+  font-family:var(--serif);font-size:1.05rem;line-height:1.7;
+  padding:14px;border-radius:8px;
+  border:1px solid var(--border);background:#140b03;
+  color:var(--cream);outline:none;resize:vertical;
+  transition:border-color .2s;
+}
+.text-area:focus{border-color:var(--terra)}
+.text-area[readonly]{
+  color:var(--cream2);
+  background:#190e05;
+  border-color:var(--border2);
+  cursor:default;
+}
+.text-area::placeholder{color:var(--muted);font-style:italic}
+
+.char-count{
+  font-family:var(--mono);font-size:.6rem;color:var(--muted);
+  text-align:right;margin-top:6px;
+}
+
+/* ---- Divider / Translate Button ---- */
+.divider-col{
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  padding:20px 14px;gap:14px;
+  border-left:1px solid var(--border);border-right:1px solid var(--border);
+  background:var(--surface2);
+  min-width:80px;
+}
+@media(max-width:700px){
+  .divider-col{flex-direction:row;padding:14px 20px;border:none;border-top:1px solid var(--border);border-bottom:1px solid var(--border)}
+}
+
+.translate-btn{
+  width:52px;height:52px;border-radius:50%;
+  border:2px solid var(--terra);
+  background:rgba(196,82,42,.15);
+  color:var(--terra);font-size:1.4rem;
+  cursor:pointer;transition:all .25s;
+  display:flex;align-items:center;justify-content:center;
+  flex-shrink:0;
+}
+.translate-btn:hover{
+  background:var(--terra);color:var(--cream);
+  transform:scale(1.08);
+  box-shadow:0 0 20px rgba(196,82,42,.4);
+}
+.translate-btn:disabled{border-color:var(--muted);color:var(--muted);background:transparent;transform:none;box-shadow:none;cursor:not-allowed}
+
+.log-btn{
+  width:52px;height:52px;border-radius:50%;
+  border:2px solid var(--gold);
+  background:rgba(232,160,32,.12);
+  color:var(--gold);font-size:1rem;
+  cursor:pointer;transition:all .25s;
+  display:flex;align-items:center;justify-content:center;
+  font-family:var(--mono);font-size:.6rem;letter-spacing:.04em;
+  text-align:center;line-height:1.2;
+  flex-shrink:0;
+}
+.log-btn:hover{background:var(--gold);color:var(--bg);box-shadow:0 0 16px rgba(232,160,32,.4)}
+.log-btn:disabled{border-color:var(--muted);color:var(--muted);background:transparent;cursor:not-allowed}
+
+/* category + controls */
+.controls-row{
+  display:flex;align-items:center;gap:10px;margin-top:14px;flex-wrap:wrap;
+}
+.cat-select{
+  font-family:var(--mono);font-size:.72rem;
+  padding:8px 12px;border-radius:8px;
+  border:1px solid var(--border2);background:#140b03;
+  color:var(--cream);outline:none;cursor:pointer;flex:1;min-width:120px;
+}
+.cat-select option{background:#211408}
+.copy-btn{
+  font-family:var(--mono);font-size:.68rem;
+  padding:8px 14px;border-radius:8px;
+  border:1px solid var(--border2);background:transparent;
+  color:var(--muted);cursor:pointer;transition:all .2s;
+  white-space:nowrap;
+}
+.copy-btn:hover{border-color:var(--gold);color:var(--gold)}
+
+/* ---- TX Status ---- */
+#txStatus{
+  font-family:var(--mono);font-size:.68rem;
+  padding:10px 14px;border-radius:8px;
+  background:#0f0803;border:1px solid var(--border);
+  color:var(--muted);display:flex;align-items:center;gap:8px;
+  word-break:break-all;min-height:38px;
+  max-width:1000px;
+}
+.dot{width:7px;height:7px;border-radius:50%;background:var(--muted);flex-shrink:0}
+#txStatus.pending .dot{background:#ffd600;animation:pulse 1s infinite}
+#txStatus.success .dot{background:var(--green);box-shadow:0 0 6px var(--green)}
+#txStatus.fail .dot{background:var(--red)}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.2}}
+
+/* ---- Stats bar ---- */
+.stats-bar{
+  display:flex;gap:14px;flex-wrap:wrap;max-width:1000px;
+}
+.stat-chip{
+  background:var(--surface);border:1px solid var(--border2);
+  border-radius:var(--radius);padding:12px 18px;
+  display:flex;flex-direction:column;gap:3px;flex:1;min-width:130px;
+}
+.stat-val{font-family:var(--serif);font-size:1.6rem;font-weight:700;color:var(--gold)}
+.stat-label{font-family:var(--mono);font-size:.6rem;color:var(--muted);letter-spacing:.1em;text-transform:uppercase}
+
+/* ---- History ---- */
+.hist-list{display:flex;flex-direction:column;gap:10px;max-height:420px;overflow-y:auto}
+.hist-item{
+  padding:14px 16px;border-radius:8px;
+  background:#0f0803;border:1px solid var(--border);
+  transition:border-color .2s;
+}
+.hist-item:hover{border-color:var(--terra)}
+.hist-item-header{display:flex;align-items:center;gap:8px;margin-bottom:8px}
+.hist-cat{
+  font-family:var(--mono);font-size:.58rem;padding:2px 8px;
+  border-radius:99px;border:1px solid var(--terra);color:var(--terra);
+  letter-spacing:.06em;flex-shrink:0;
+}
+.hist-time{font-family:var(--mono);font-size:.6rem;color:var(--muted)}
+.hist-en{font-family:var(--serif);font-size:.9rem;color:var(--cream);margin-bottom:5px;font-style:italic}
+.hist-es{font-family:var(--serif);font-size:.9rem;color:var(--gold)}
+.hist-meta{font-family:var(--mono);font-size:.6rem;color:var(--muted);margin-top:6px}
+
+/* ---- Phrase Book ---- */
+.phrase-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;max-width:900px}
+@media(max-width:660px){.phrase-grid{grid-template-columns:1fr}}
+
+.phrase-card{
+  padding:14px;border-radius:8px;
+  background:#0f0803;border:1px solid var(--border);
+  transition:border-color .2s;
+}
+.phrase-card:hover{border-color:var(--gold)}
+.phrase-en{font-family:var(--serif);font-size:.95rem;color:var(--cream);margin-bottom:6px;font-style:italic}
+.phrase-es{font-family:var(--serif);font-size:.95rem;color:var(--gold);font-weight:700}
+.phrase-meta{display:flex;align-items:center;justify-content:space-between;margin-top:8px}
+.phrase-votes{font-family:var(--mono);font-size:.62rem;color:var(--muted)}
+.phrase-badge{font-family:var(--mono);font-size:.56rem;padding:2px 7px;border-radius:99px}
+.phrase-badge.verified{border:1px solid var(--green);color:var(--green)}
+.phrase-badge.pending{border:1px solid var(--muted);color:var(--muted)}
+.upvote-btn{
+  font-family:var(--mono);font-size:.62rem;
+  padding:4px 10px;border-radius:99px;
+  border:1px solid var(--border2);background:transparent;
+  color:var(--muted);cursor:pointer;transition:all .2s;
+}
+.upvote-btn:hover{border-color:var(--terra);color:var(--terra)}
+
+.input-row{display:flex;flex-direction:column;gap:5px;margin-bottom:12px}
+.input-row label{font-family:var(--mono);font-size:.6rem;letter-spacing:.12em;text-transform:uppercase;color:var(--muted)}
+.input-row input,.input-row textarea{
+  font-family:var(--serif);font-size:.95rem;
+  padding:10px 14px;border-radius:8px;
+  border:1px solid var(--border2);background:#140b03;
+  color:var(--cream);outline:none;resize:vertical;transition:border-color .2s;
+}
+.input-row input:focus,.input-row textarea:focus{border-color:var(--terra)}
+
+.primary-btn{
+  font-family:var(--mono);font-size:.75rem;letter-spacing:.08em;
+  padding:11px 22px;border-radius:8px;
+  border:1px solid var(--terra);
+  background:rgba(196,82,42,.12);color:var(--terra);
+  cursor:pointer;transition:all .2s;
+}
+.primary-btn:hover{background:var(--terra);color:var(--cream)}
+.primary-btn:disabled{border-color:var(--muted);color:var(--muted);background:transparent;cursor:not-allowed}
+
+/* ---- Mini App Builder ---- */
+.builder-grid{display:grid;grid-template-columns:1fr 1fr;gap:20px;max-width:960px}
+@media(max-width:720px){.builder-grid{grid-template-columns:1fr}}
+
+.form-group{display:flex;flex-direction:column;gap:5px;margin-bottom:12px}
+.form-group label{font-family:var(--mono);font-size:.6rem;letter-spacing:.14em;text-transform:uppercase;color:var(--muted)}
+.form-group input,.form-group textarea,.form-group select{
+  font-family:var(--mono);font-size:.8rem;
+  padding:10px 12px;border-radius:8px;border:1px solid var(--border2);
+  background:#140b03;color:var(--cream);outline:none;resize:vertical;transition:border-color .2s;
+}
+.form-group input:focus,.form-group textarea:focus,.form-group select:focus{border-color:var(--terra)}
+.form-group select option{background:#211408}
+
+.app-card{padding:12px;border-radius:8px;background:#0f0803;border:1px solid var(--border);transition:border-color .2s;margin-bottom:8px}
+.app-card:hover{border-color:var(--gold)}
+.app-card-hd{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px}
+.app-card-name{font-family:var(--serif);font-size:1rem;color:var(--gold)}
+.app-badge{font-family:var(--mono);font-size:.58rem;padding:2px 7px;border-radius:99px;border:1px solid var(--green);color:var(--green)}
+.app-badge.off{border-color:var(--muted);color:var(--muted)}
+.app-config{font-family:var(--mono);font-size:.62rem;color:var(--muted);white-space:pre-wrap;word-break:break-all;max-height:60px;overflow:hidden}
+.app-meta{font-family:var(--mono);font-size:.58rem;color:var(--muted);margin-top:6px}
+
+#previewFrame{width:100%;min-height:260px;border-radius:8px;border:1px solid var(--border2);background:#fff;margin-top:10px}
+
+/* ---- Toast ---- */
+#toast{
+  position:fixed;bottom:24px;right:24px;
+  background:var(--surface2);border:1px solid var(--border2);
+  border-radius:var(--radius);padding:12px 18px;
+  font-family:var(--mono);font-size:.72rem;color:var(--cream);
+  z-index:9999;transform:translateY(80px);opacity:0;
+  transition:all .3s cubic-bezier(.4,0,.2,1);max-width:340px;
+}
+#toast.show{transform:translateY(0);opacity:1}
+#toast.success{border-color:var(--green);color:var(--green)}
+#toast.error{border-color:var(--red);color:var(--red)}
+#toast.gold{border-color:var(--gold);color:var(--gold)}
+
+::-webkit-scrollbar{width:4px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:var(--border2);border-radius:2px}
+
+/* loading spinner */
+.spin{display:inline-block;animation:spin .7s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+@keyframes fadeUp{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
+.card,.translator-grid{animation:fadeUp .4s ease both}
+</style>
+</head>
+<body>
+<div id="root">
+
+<!-- ---- Header ---- -->
+<header>
+  <div class="logo">
+    <div class="logo-mark">Tr</div>
+    <div>
+      <div class="logo-text">Tra<span>ductor</span></div>
+      <div class="logo-sub">ENGLISH -> SPANISH ON BASE</div>
+    </div>
+  </div>
+  <button id="connectBtn" onclick="connectWallet()">Connect Wallet</button>
+</header>
+
+<!-- ---- Tabs ---- -->
+<div class="tabs">
+  <button class="tab active" onclick="switchTab('translate',this)">Translate</button>
+  <button class="tab" onclick="switchTab('history',this)">History</button>
+  <button class="tab" onclick="switchTab('phrases',this)">Phrase Book</button>
+  <button class="tab" onclick="switchTab('builder',this)">Mini Apps</button>
+</div>
+
+<!-- ============ TRANSLATE ============ -->
+<div id="panel-translate" class="panel active">
+
+  <!-- Stats bar -->
+  <div class="stats-bar">
+    <div class="stat-chip">
+      <div class="stat-val" id="statTotal">—</div>
+      <div class="stat-label">Translations</div>
+    </div>
+    <div class="stat-chip">
+      <div class="stat-val" id="statChars">—</div>
+      <div class="stat-label">Chars Logged</div>
+    </div>
+    <div class="stat-chip">
+      <div class="stat-val" id="statWords">—</div>
+      <div class="stat-label">Words Logged</div>
+    </div>
+    <div class="stat-chip">
+      <div class="stat-val" id="statPhrases">—</div>
+      <div class="stat-label">Phrases</div>
+    </div>
+  </div>
+
+  <!-- Main translator -->
+  <div class="translator-grid">
+
+    <!-- English input -->
+    <div class="lang-panel left">
+      <div class="lang-header">
+        <span class="lang-badge en">EN</span>
+        <span class="lang-name">English</span>
+      </div>
+      <textarea class="text-area" id="enInput"
+        placeholder="Type your English sentence here..."
+        oninput="onEnInput()"></textarea>
+      <div class="char-count"><span id="charCount">0</span> / 1000 characters</div>
+      <div class="controls-row">
+        <select class="cat-select" id="catSelect">
+          <option value="casual">Casual</option>
+          <option value="business">Business</option>
+          <option value="greeting">Greeting</option>
+          <option value="travel">Travel</option>
+          <option value="medical">Medical</option>
+          <option value="legal">Legal</option>
+          <option value="other">Other</option>
+        </select>
+        <button class="copy-btn" onclick="clearAll()">Clear</button>
+      </div>
+    </div>
+
+    <!-- Center buttons -->
+    <div class="divider-col">
+      <button class="translate-btn" id="translateBtn" onclick="doTranslate()" title="Translate">
+        <span id="translateIcon">&#10230;</span>
+      </button>
+      <button class="log-btn" id="logBtn" onclick="logOnChain()" title="Log on Base" disabled>
+        <span>LOG<br>BASE</span>
+      </button>
+    </div>
+
+    <!-- Spanish output -->
+    <div class="lang-panel">
+      <div class="lang-header">
+        <span class="lang-badge es">ES</span>
+        <span class="lang-name">Espanol</span>
+      </div>
+      <textarea class="text-area" id="esOutput" readonly
+        placeholder="Traduccion aparecera aqui..."></textarea>
+      <div class="char-count" id="esCharCount">&nbsp;</div>
+      <div class="controls-row">
+        <button class="copy-btn" onclick="copyResult()" id="copyBtn" style="flex:1">Copy Translation</button>
+        <button class="copy-btn" onclick="addToPhrasebook()" id="phraseBtn">+ Phrasebook</button>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- TX Status -->
+  <div id="txStatus">
+    <span class="dot"></span>
+    <span id="txMsg">Connect wallet to log translations on Base.</span>
+  </div>
+
+</div>
+
+<!-- ============ HISTORY ============ -->
+<div id="panel-history" class="panel">
+  <div style="max-width:800px">
+    <div class="card">
+      <div class="card-title">Your On-Chain Translation Log</div>
+      <div class="hist-list" id="historyList">
+        <p style="font-family:var(--mono);font-size:.75rem;color:var(--muted)">Connect wallet to see your history.</p>
+      </div>
+      <div style="margin-top:14px">
+        <button class="primary-btn" onclick="loadHistory()" style="font-size:.7rem;padding:8px 16px">Refresh</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ============ PHRASE BOOK ============ -->
+<div id="panel-phrases" class="panel">
+<div style="max-width:900px;display:flex;flex-direction:column;gap:20px">
+
+  <div class="card">
+    <div class="card-title">Add to Community Phrase Book</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
+      <div class="input-row">
+        <label>English</label>
+        <input id="phraseEn" type="text" placeholder="How much does it cost?"/>
+      </div>
+      <div class="input-row">
+        <label>Spanish</label>
+        <input id="phraseEs" type="text" placeholder="Cuanto cuesta?"/>
+      </div>
+    </div>
+    <button class="primary-btn" onclick="submitPhrase()">Add Phrase on Base</button>
+  </div>
+
+  <div class="card">
+    <div class="card-title">Community Phrases <span id="phraseCount" style="color:var(--gold)">—</span></div>
+    <div class="phrase-grid" id="phraseList">
+      <p style="font-family:var(--mono);font-size:.75rem;color:var(--muted);grid-column:1/-1">Connect wallet to browse phrases.</p>
+    </div>
+    <div style="margin-top:14px">
+      <button class="primary-btn" onclick="loadPhrases()" style="font-size:.7rem;padding:8px 16px">Refresh</button>
+    </div>
+  </div>
+
+</div>
+</div>
+
+<!-- ============ MINI APP BUILDER ============ -->
+<div id="panel-builder" class="panel">
+<div class="builder-grid">
+
+  <div class="card">
+    <div class="card-title">Deploy Mini App on Base</div>
+    <div class="form-group">
+      <label>App Name</label>
+      <input id="appName" placeholder="Spanish Greeter"/>
+    </div>
+    <div class="form-group">
+      <label>Template</label>
+      <select id="appTemplate" onchange="loadTemplate()">
+        <option value="">-- choose template --</option>
+        <option value="greeter">Spanish Greeter</option>
+        <option value="phrasebook">Quick Phrasebook</option>
+        <option value="quiz">Vocab Quiz</option>
+        <option value="numbers">Numbers Translator</option>
+        <option value="custom">Custom</option>
+      </select>
+    </div>
+    <div class="form-group">
+      <label>Config JSON (on-chain)</label>
+      <textarea id="appConfig" rows="6" placeholder='{"type":"greeter","theme":"warm"}'></textarea>
+    </div>
+    <div class="form-group">
+      <label>HTML Preview</label>
+      <textarea id="appHtml" rows="5" placeholder="<div>...</div>" oninput="updatePreview()"></textarea>
+    </div>
+    <button class="primary-btn" onclick="deployApp()" id="deployBtn">Deploy to Base</button>
+  </div>
+
+  <div style="display:flex;flex-direction:column;gap:16px">
+    <div class="card" style="flex:0 0 auto">
+      <div class="card-title">Live Preview</div>
+      <iframe id="previewFrame" sandbox="allow-scripts" srcdoc="<p style='padding:20px;color:#666;font-family:serif;font-style:italic'>Select a template to preview...</p>"></iframe>
+    </div>
+    <div class="card" style="flex:1">
+      <div class="card-title">Deployed Apps <span id="appCount" style="color:var(--gold)">—</span></div>
+      <div id="appsList">
+        <p style="font-family:var(--mono);font-size:.72rem;color:var(--muted)">Connect wallet to see apps.</p>
+      </div>
+    </div>
+  </div>
+
+</div>
+</div>
+
+</div><!-- /root -->
+<div id="toast"></div>
+
+<script>
+// ============================================
+//  CONFIG
+// ============================================
+const CONTRACT_ADDRESS = "0xb25aB265b10AbbA43c927633866Aa64B542e43f7"; // Base Mainnet
+const OWNER_ADDRESS    = "0xdBF45AF1cD37deBEDD059BEe0525289d2b5E5CF4".toLowerCase();
+const BASE_CHAIN_ID    = "0x2105"; // 8453
+
+// Anthropic API for translation - uses claude-sonnet-4-20250514
+const ANTHROPIC_API    = "https://api.anthropic.com/v1/messages";
+
+const ABI = [
+  "function logTranslation(string sourceText,string translatedText,string category) returns (uint256)",
+  "function logTranslationLite(bytes32 sourceHash,string translatedText,uint256 charCount,string category) returns (uint256)",
+  "function addPhrase(string english,string spanish) returns (uint256)",
+  "function upvotePhrase(uint256 phraseId)",
+  "function verifyPhrase(uint256 phraseId,bool verified)",
+  "function deployMiniApp(string name,string config) returns (uint256)",
+  "function toggleMiniApp(uint256 appId)",
+  "function getTranslationsCount() view returns (uint256)",
+  "function getPhrasesCount() view returns (uint256)",
+  "function getMiniAppsCount() view returns (uint256)",
+  "function getUserTranslations(address u) view returns (uint256[])",
+  "function getUserPhrases(address u) view returns (uint256[])",
+  "function getUserApps(address u) view returns (uint256[])",
+  "function getStats() view returns (uint256,uint256,uint256,uint256)",
+  "function translations(uint256) view returns (address,string,string,uint256,uint256,uint256,string)",
+  "function phrases(uint256) view returns (address,string,string,uint256,uint256,bool)",
+  "function miniApps(uint256) view returns (address,string,string,uint256,bool)"
+];
+
+// ============================================
+//  State
+// ============================================
+let provider, signer, contract, walletAddress;
+let currentTranslation = { en:"", es:"" };
+let translationLogged  = false;
+
+// ============================================
+//  Wallet
+// ============================================
+async function connectWallet() {
+  if (!window.ethereum) { showToast("Install MetaMask or Coinbase Wallet","error"); return; }
+  try {
+    await window.ethereum.request({ method:"eth_requestAccounts" });
+    try {
+      await window.ethereum.request({ method:"wallet_switchEthereumChain", params:[{chainId:BASE_CHAIN_ID}] });
+    } catch(sw) {
+      if (sw.code===4902) await window.ethereum.request({
+        method:"wallet_addEthereumChain",
+        params:[{ chainId:BASE_CHAIN_ID, chainName:"Base",
+          nativeCurrency:{name:"Ether",symbol:"ETH",decimals:18},
+          rpcUrls:["https://mainnet.base.org"],
+          blockExplorerUrls:["https://basescan.org"] }]
+      });
+    }
+    provider = new ethers.BrowserProvider(window.ethereum);
+    signer   = await provider.getSigner();
+    walletAddress = (await signer.getAddress()).toLowerCase();
+    contract = new ethers.Contract(CONTRACT_ADDRESS, ABI, signer);
+
+    const btn = document.getElementById("connectBtn");
+    btn.textContent = walletAddress.slice(0,6)+"..."+walletAddress.slice(-4);
+    btn.classList.add("connected");
+
+    setTxStatus("idle","Connected on Base -- ready to log translations");
+    showToast("Wallet connected","success");
+    loadStats();
+    loadHistory();
+    loadApps();
+    loadPhrases();
+  } catch(e) {
+    showToast(e.message||"Connection failed","error");
+  }
+}
+
+// ============================================
+//  Translation (via Claude API)
+// ============================================
+function onEnInput() {
+  const txt = document.getElementById("enInput").value;
+  document.getElementById("charCount").textContent = txt.length;
+  // reset log button if text changed
+  if (txt !== currentTranslation.en) {
+    document.getElementById("logBtn").disabled = true;
+    translationLogged = false;
+  }
+}
+
+async function doTranslate() {
+  const text = document.getElementById("enInput").value.trim();
+  if (!text) { showToast("Enter some English text first","error"); return; }
+  if (text.length > 1000) { showToast("Max 1000 characters","error"); return; }
+
+  const btn = document.getElementById("translateBtn");
+  btn.disabled = true;
+  document.getElementById("translateIcon").innerHTML = '<span class="spin">&#8635;</span>';
+  document.getElementById("esOutput").value = "";
+  document.getElementById("esCharCount").textContent = "Translating...";
+
+  try {
+    // Call Claude API for translation
+    const response = await fetch(ANTHROPIC_API, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        model: "claude-sonnet-4-20250514",
+        max_tokens: 1000,
+        messages: [{
+          role: "user",
+          content: `Translate the following English text to Spanish. Return ONLY the Spanish translation, nothing else, no explanation, no quotes, no labels:\n\n${text}`
+        }]
+      })
+    });
+
+    if (!response.ok) {
+      // Fallback: use a built-in mini dictionary for common phrases
+      const es = fallbackTranslate(text);
+      setTranslationResult(text, es);
+      showToast("API unavailable - using local fallback","gold");
+      return;
+    }
+
+    const data = await response.json();
+    const es   = data.content?.find(b => b.type === "text")?.text?.trim() || "";
+
+    if (!es) throw new Error("Empty translation response");
+
+    setTranslationResult(text, es);
+    showToast("Translation complete!","success");
+
+  } catch(e) {
+    // fallback to local dictionary
+    const es = fallbackTranslate(text);
+    setTranslationResult(text, es);
+    showToast("Using offline translation","gold");
+  } finally {
+    btn.disabled = false;
+    document.getElementById("translateIcon").innerHTML = "&#10230;";
+  }
+}
+
+function setTranslationResult(en, es) {
+  currentTranslation = { en, es };
+  document.getElementById("esOutput").value = es;
+  document.getElementById("esCharCount").textContent = es.length + " characters";
+  document.getElementById("logBtn").disabled = !walletAddress;
+  translationLogged = false;
+}
+
+// ============================================
+//  Fallback offline translator (common phrases)
+// ============================================
+function fallbackTranslate(text) {
+  const dict = {
+    "hello": "hola", "good morning": "buenos dias", "good afternoon": "buenas tardes",
+    "good night": "buenas noches", "thank you": "gracias", "please": "por favor",
+    "yes": "si", "no": "no", "how are you": "como estas", "i love you": "te quiero",
+    "goodbye": "adios", "see you later": "hasta luego", "excuse me": "perdon",
+    "i'm sorry": "lo siento", "help": "ayuda", "water": "agua", "food": "comida",
+    "where is": "donde esta", "how much": "cuanto cuesta", "what time": "que hora es",
+    "my name is": "mi nombre es", "nice to meet you": "mucho gusto",
+    "do you speak english": "hablas ingles", "i don't understand": "no entiendo",
+    "the": "el/la", "and": "y", "or": "o", "but": "pero", "with": "con",
+    "without": "sin", "for": "para", "from": "de", "to": "a",
+    "i want": "quiero", "i need": "necesito", "i have": "tengo",
+    "today": "hoy", "tomorrow": "manana", "yesterday": "ayer",
+    "monday": "lunes", "tuesday": "martes", "wednesday": "miercoles",
+    "thursday": "jueves", "friday": "viernes", "saturday": "sabado", "sunday": "domingo"
+  };
+  const lower = text.toLowerCase();
+  for (const [en, es] of Object.entries(dict)) {
+    if (lower === en || lower.includes(en)) {
+      return text.replace(new RegExp(en, "gi"), es);
+    }
+  }
+  // word-by-word fallback
+  const wordDict = {
+    "hello":"hola","world":"mundo","house":"casa","dog":"perro","cat":"gato",
+    "man":"hombre","woman":"mujer","boy":"nino","girl":"nina","friend":"amigo",
+    "book":"libro","car":"coche","day":"dia","night":"noche","love":"amor",
+    "life":"vida","time":"tiempo","year":"ano","people":"gente","good":"bueno",
+    "bad":"malo","big":"grande","small":"pequeno","new":"nuevo","old":"viejo",
+    "one":"uno","two":"dos","three":"tres","four":"cuatro","five":"cinco",
+    "six":"seis","seven":"siete","eight":"ocho","nine":"nueve","ten":"diez"
+  };
+  return text.split(" ").map(w => wordDict[w.toLowerCase()] || w).join(" ");
+}
+
+// ============================================
+//  Log on-chain
+// ============================================
+async function logOnChain() {
+  if (!contract) { showToast("Connect wallet first","error"); return; }
+  if (!currentTranslation.en || !currentTranslation.es) { showToast("Translate something first","error"); return; }
+  if (translationLogged) { showToast("Already logged on Base","gold"); return; }
+
+  const cat = document.getElementById("catSelect").value;
+  const btn = document.getElementById("logBtn");
+  btn.disabled = true;
+  setTxStatus("pending","Logging translation on Base...");
+
+  try {
+    let tx;
+    // Use lite mode if text > 500 chars to save gas
+    if (currentTranslation.en.length > 500) {
+      const hash = ethers.keccak256(ethers.toUtf8Bytes(currentTranslation.en));
+      tx = await contract.logTranslationLite(
+        hash,
+        currentTranslation.es,
+        currentTranslation.en.length,
+        cat
+      );
+    } else {
+      tx = await contract.logTranslation(
+        currentTranslation.en,
+        currentTranslation.es,
+        cat
+      );
+    }
+
+    setTxStatus("pending","Tx sent: "+tx.hash.slice(0,14)+"...");
+    const receipt = await tx.wait();
+    setTxStatus("success","Confirmed | "+tx.hash.slice(0,10)+"... | Block "+receipt.blockNumber);
+    showToast("Translation logged on Base!","gold");
+    translationLogged = true;
+    btn.disabled = true;
+    loadStats();
+    addLocalHistItem(currentTranslation.en, currentTranslation.es, cat);
+  } catch(e) {
+    setTxStatus("fail","Failed: "+(e.shortMessage||e.message));
+    showToast("Transaction failed","error");
+    btn.disabled = false;
+  }
+}
+
+function clearAll() {
+  document.getElementById("enInput").value = "";
+  document.getElementById("esOutput").value = "";
+  document.getElementById("charCount").textContent = "0";
+  document.getElementById("esCharCount").textContent = "\u00a0";
+  document.getElementById("logBtn").disabled = true;
+  currentTranslation = { en:"", es:"" };
+  translationLogged = false;
+}
+
+function copyResult() {
+  const txt = document.getElementById("esOutput").value;
+  if (!txt) { showToast("Nothing to copy","error"); return; }
+  navigator.clipboard.writeText(txt).then(()=>showToast("Copied to clipboard","success"));
+}
+
+function addToPhrasebook() {
+  if (!currentTranslation.en || !currentTranslation.es) { showToast("Translate something first","error"); return; }
+  document.getElementById("phraseEn").value = currentTranslation.en.slice(0,120);
+  document.getElementById("phraseEs").value = currentTranslation.es.slice(0,120);
+  switchTab("phrases", document.querySelectorAll(".tab")[2]);
+  showToast("Filled from translation","gold");
+}
+
+// ============================================
+//  Stats
+// ============================================
+async function loadStats() {
+  if (!contract) return;
+  try {
+    const s = await contract.getStats();
+    document.getElementById("statTotal").textContent   = Number(s[0]).toLocaleString();
+    document.getElementById("statChars").textContent   = Number(s[1]).toLocaleString();
+    document.getElementById("statWords").textContent   = Number(s[2]).toLocaleString();
+    document.getElementById("statPhrases").textContent = Number(s[3]).toLocaleString();
+  } catch(e){ console.warn(e); }
+}
+
+// ============================================
+//  History
+// ============================================
+function addLocalHistItem(en, es, cat) {
+  const list = document.getElementById("historyList");
+  const p = list.querySelector("p");
+  if (p) p.remove();
+  const item = document.createElement("div");
+  item.className = "hist-item";
+  item.innerHTML = `
+    <div class="hist-item-header">
+      <span class="hist-cat">${escHtml(cat)}</span>
+      <span class="hist-time">${new Date().toLocaleString()}</span>
+    </div>
+    <div class="hist-en">"${escHtml(en)}"</div>
+    <div class="hist-es">"${escHtml(es)}"</div>
+    <div class="hist-meta">${en.length} chars on Base</div>`;
+  list.prepend(item);
+}
+
+async function loadHistory() {
+  if (!contract || !walletAddress) return;
+  try {
+    const idxs = await contract.getUserTranslations(walletAddress);
+    const list  = document.getElementById("historyList");
+    list.innerHTML = "";
+    if (!idxs.length) {
+      list.innerHTML = '<p style="font-family:var(--mono);font-size:.75rem;color:var(--muted)">No translations yet.</p>';
+      return;
+    }
+    for (let i=idxs.length-1; i>=Math.max(0,idxs.length-30); i--) {
+      const t  = await contract.translations(idxs[i]);
+      const ts = new Date(Number(t[5])*1000).toLocaleString();
+      const item = document.createElement("div");
+      item.className = "hist-item";
+      const enTxt = t[1].length>200 ? t[1].slice(0,200)+"..." : t[1];
+      const esTxt = t[2].length>200 ? t[2].slice(0,200)+"..." : t[2];
+      item.innerHTML = `
+        <div class="hist-item-header">
+          <span class="hist-cat">${escHtml(t[6]||"general")}</span>
+          <span class="hist-time">${ts}</span>
+        </div>
+        <div class="hist-en">"${escHtml(enTxt)}"</div>
+        <div class="hist-es">"${escHtml(esTxt)}"</div>
+        <div class="hist-meta">${t[3]} chars &middot; ${t[4]} words &middot; <a href="https://basescan.org/address/${CONTRACT_ADDRESS}" target="_blank" style="color:var(--terra)">Basescan</a></div>`;
+      list.appendChild(item);
+    }
+  } catch(e) { console.warn(e); }
+}
+
+// ============================================
+//  Phrase Book
+// ============================================
+async function submitPhrase() {
+  if (!contract) { showToast("Connect wallet first","error"); return; }
+  const en = document.getElementById("phraseEn").value.trim();
+  const es = document.getElementById("phraseEs").value.trim();
+  if (!en || !es) { showToast("Enter both English and Spanish","error"); return; }
+  setTxStatus("pending","Adding phrase to Base...");
+  try {
+    const tx = await contract.addPhrase(en, es);
+    await tx.wait();
+    setTxStatus("success","Phrase added on Base!");
+    showToast("Phrase added!","success");
+    document.getElementById("phraseEn").value = "";
+    document.getElementById("phraseEs").value = "";
+    loadPhrases();
+  } catch(e) {
+    setTxStatus("fail","Failed: "+(e.shortMessage||e.message));
+    showToast("Failed","error");
+  }
+}
+
+async function loadPhrases() {
+  if (!contract) return;
+  try {
+    const count = await contract.getPhrasesCount();
+    document.getElementById("phraseCount").textContent = Number(count);
+    const list = document.getElementById("phraseList");
+    list.innerHTML = "";
+    if (!Number(count)) {
+      list.innerHTML = '<p style="font-family:var(--mono);font-size:.75rem;color:var(--muted);grid-column:1/-1">No phrases yet. Be the first!</p>';
+      return;
+    }
+    const total = Math.min(Number(count), 20);
+    for (let i=Number(count)-1; i>=Math.max(0,Number(count)-total); i--) {
+      const p = await contract.phrases(i);
+      const card = document.createElement("div");
+      card.className = "phrase-card";
+      card.innerHTML = `
+        <div class="phrase-en">"${escHtml(p[1])}"</div>
+        <div class="phrase-es">"${escHtml(p[2])}"</div>
+        <div class="phrase-meta">
+          <span class="phrase-votes">&#9650; ${Number(p[3])}</span>
+          <button class="upvote-btn" onclick="upvote(${i})">Upvote</button>
+          <span class="phrase-badge ${p[5]?'verified':'pending'}">${p[5]?'Verified':'Community'}</span>
+        </div>`;
+      list.appendChild(card);
+    }
+  } catch(e) { console.warn(e); }
+}
+
+async function upvote(id) {
+  if (!contract) { showToast("Connect wallet first","error"); return; }
+  try {
+    const tx = await contract.upvotePhrase(id);
+    await tx.wait();
+    showToast("Upvoted!","success");
+    loadPhrases();
+  } catch(e) { showToast(e.shortMessage||"Already voted","error"); }
+}
+
+// ============================================
+//  Mini App Builder
+// ============================================
+const TEMPLATES = {
+  greeter: {
+    config: JSON.stringify({type:"greeter",theme:"warm",lang:"es"},null,2),
+    html:`<style>body{margin:0;background:#1a0f05;color:#f5e6c8;font-family:Georgia,serif;display:flex;align-items:center;justify-content:center;height:100vh;text-align:center}</style>
+<div style="padding:32px">
+  <div style="font-size:3rem;margin-bottom:12px">Hola!</div>
+  <div style="font-size:1.2rem;color:#e8a020;margin-bottom:24px">Welcome to Traductor on Base</div>
+  <input id="n" placeholder="Your name..." style="padding:10px 16px;background:#2a1a0a;border:1px solid #5a3418;border-radius:8px;color:#f5e6c8;font-size:1rem;outline:none;width:220px">
+  <div id="g" style="margin-top:16px;font-size:1.3rem;color:#c4522a;min-height:32px"></div>
+  <script>document.getElementById('n').oninput=function(){var v=this.value;document.getElementById('g').textContent=v?'Hola, '+v+'! Bienvenido!':''}<\/script>
+</div>`
+  },
+  phrasebook: {
+    config: JSON.stringify({type:"phrasebook",category:"travel",theme:"warm"},null,2),
+    html:`<style>body{margin:0;background:#1a0f05;color:#f5e6c8;font-family:Georgia,serif;padding:20px}</style>
+<h3 style="color:#e8a020;margin-bottom:16px;font-size:1rem">Travel Phrases</h3>
+<div style="display:flex;flex-direction:column;gap:8px">
+  <div style="background:#2a1a0a;border:1px solid #5a3418;border-radius:8px;padding:12px">
+    <div style="color:#c4522a;font-style:italic">"Where is the bathroom?"</div>
+    <div style="color:#e8a020;font-weight:700;margin-top:4px">"Donde esta el bano?"</div>
+  </div>
+  <div style="background:#2a1a0a;border:1px solid #5a3418;border-radius:8px;padding:12px">
+    <div style="color:#c4522a;font-style:italic">"How much does it cost?"</div>
+    <div style="color:#e8a020;font-weight:700;margin-top:4px">"Cuanto cuesta?"</div>
+  </div>
+  <div style="background:#2a1a0a;border:1px solid #5a3418;border-radius:8px;padding:12px">
+    <div style="color:#c4522a;font-style:italic">"I don't speak Spanish"</div>
+    <div style="color:#e8a020;font-weight:700;margin-top:4px">"No hablo espanol"</div>
+  </div>
+</div>`
+  },
+  quiz: {
+    config: JSON.stringify({type:"vocab-quiz",difficulty:"beginner",words:20},null,2),
+    html:`<style>body{margin:0;background:#1a0f05;color:#f5e6c8;font-family:Georgia,serif;display:flex;align-items:center;justify-content:center;height:100vh}</style>
+<div style="background:#2a1a0a;border:1px solid #5a3418;border-radius:12px;padding:28px;width:300px;text-align:center">
+  <div style="color:#e8a020;font-size:.75rem;letter-spacing:.2em;margin-bottom:16px">VOCAB QUIZ</div>
+  <div id="word" style="font-size:2rem;font-weight:700;color:#f5e6c8;margin-bottom:20px">Hello</div>
+  <input id="ans" placeholder="Type in Spanish..." style="width:100%;background:#140b03;border:1px solid #5a3418;border-radius:8px;padding:10px;color:#f5e6c8;font-family:Georgia,serif;font-size:1rem;outline:none;text-align:center">
+  <button onclick="check()" style="width:100%;margin-top:10px;background:#c4522a;border:none;border-radius:8px;padding:10px;color:#fff;cursor:pointer;font-size:1rem">Check</button>
+  <div id="fb" style="margin-top:10px;min-height:24px;font-size:.9rem"></div>
+  <script>var w=[['Hello','Hola'],['Goodbye','Adios'],['Thanks','Gracias'],['Please','Por favor'],['Yes','Si'],['No','No'],['Water','Agua'],['Food','Comida']];var i=0;function check(){var a=document.getElementById('ans').value.trim().toLowerCase();var correct=w[i][1].toLowerCase();document.getElementById('fb').textContent=a===correct?'Correcto!':'Incorrecto. Es: '+w[i][1];document.getElementById('fb').style.color=a===correct?'#6ab04c':'#e05040';setTimeout(function(){i=(i+1)%w.length;document.getElementById('word').textContent=w[i][0];document.getElementById('ans').value='';document.getElementById('fb').textContent=''},1500)}<\/script>
+</div>`
+  },
+  numbers: {
+    config: JSON.stringify({type:"numbers",range:"1-100",theme:"warm"},null,2),
+    html:`<style>body{margin:0;background:#1a0f05;color:#f5e6c8;font-family:Georgia,serif;display:flex;align-items:center;justify-content:center;height:100vh}</style>
+<div style="text-align:center;padding:24px">
+  <div style="color:#e8a020;font-size:.75rem;letter-spacing:.2em;margin-bottom:16px">NUMBERS EN ESPANOL</div>
+  <input id="n" type="number" min="1" max="999" placeholder="Enter a number" style="padding:12px 20px;background:#2a1a0a;border:1px solid #5a3418;border-radius:8px;color:#f5e6c8;font-size:1.2rem;outline:none;text-align:center;width:200px">
+  <div id="r" style="margin-top:20px;font-size:2.5rem;font-weight:700;color:#c4522a;min-height:60px"></div>
+  <script>var n1_19=['','uno','dos','tres','cuatro','cinco','seis','siete','ocho','nueve','diez','once','doce','trece','catorce','quince','dieciseis','diecisiete','dieciocho','diecinueve'];var tens=['','','veinte','treinta','cuarenta','cincuenta','sesenta','setenta','ochenta','noventa'];function toEs(n){if(n<=0||n>=1000)return'';if(n<20)return n1_19[n];if(n<100){var t=Math.floor(n/10);var u=n%10;return u===0?tens[t]:tens[t]+' y '+n1_19[u]}var h=Math.floor(n/100);var r=n%100;var hs=['','cien','doscientos','trescientos','cuatrocientos','quinientos','seiscientos','setecientos','ochocientos','novecientos'];return r===0?hs[h]:hs[h]+' '+toEs(r)}document.getElementById('n').oninput=function(){var v=parseInt(this.value);document.getElementById('r').textContent=v?toEs(v):''}<\/script>
+</div>`
+  }
+};
+
+function loadTemplate(){
+  const t=document.getElementById("appTemplate").value;
+  if(!t||!TEMPLATES[t])return;
+  document.getElementById("appConfig").value=TEMPLATES[t].config;
+  document.getElementById("appHtml").value=TEMPLATES[t].html;
+  updatePreview();
+}
+function updatePreview(){
+  const h=document.getElementById("appHtml").value;
+  document.getElementById("previewFrame").srcdoc=h||"<p style='padding:20px;color:#666;font-family:serif'>Preview...</p>";
+}
+async function deployApp(){
+  if(!contract){showToast("Connect wallet first","error");return;}
+  const name=document.getElementById("appName").value.trim();
+  const config=document.getElementById("appConfig").value.trim();
+  if(!name||!config){showToast("Enter name and config","error");return;}
+  const btn=document.getElementById("deployBtn");
+  btn.disabled=true;btn.textContent="Deploying...";
+  setTxStatus("pending","Deploying mini app to Base...");
+  try{
+    const tx=await contract.deployMiniApp(name,config);
+    await tx.wait();
+    setTxStatus("success","App deployed on Base!");
+    showToast('"'+name+'" deployed on Base!', "gold");
+    document.getElementById("appName").value="";
+    loadApps();
+  }catch(e){
+    setTxStatus("fail","Failed: "+(e.shortMessage||e.message));
+    showToast("Deploy failed","error");
+  }finally{btn.disabled=false;btn.textContent="Deploy to Base";}
+}
+async function loadApps(){
+  if(!contract||!walletAddress)return;
+  try{
+    const idxs=await contract.getUserApps(walletAddress);
+    document.getElementById("appCount").textContent=idxs.length;
+    const list=document.getElementById("appsList");list.innerHTML="";
+    if(!idxs.length){list.innerHTML='<p style="font-family:var(--mono);font-size:.72rem;color:var(--muted)">No apps yet.</p>';return;}
+    for(let i=idxs.length-1;i>=0;i--){
+      const app=await contract.miniApps(idxs[i]);
+      const d=new Date(Number(app[3])*1000).toLocaleString();
+      const card=document.createElement("div");card.className="app-card";
+      card.innerHTML=`<div class="app-card-hd"><span class="app-card-name">${escHtml(app[1])}</span><span class="app-badge ${app[4]?'':'off'}">${app[4]?'Active':'Paused'}</span></div>
+        <div class="app-config">${escHtml(app[2].slice(0,160))}${app[2].length>160?'...':''}</div>
+        <div class="app-meta">#${idxs[i]} &middot; ${d} &middot; <a href="https://basescan.org/address/${CONTRACT_ADDRESS}" target="_blank" style="color:var(--terra)">Basescan</a></div>`;
+      list.appendChild(card);
+    }
+  }catch(e){console.warn(e);}
+}
+
+// ============================================
+//  Helpers
+// ============================================
+function setTxStatus(s,m){
+  const e=document.getElementById("txStatus");e.className=s;
+  document.getElementById("txMsg").textContent=m;
+}
+function showToast(m,t=""){
+  const e=document.getElementById("toast");e.textContent=m;e.className="show "+t;
+  clearTimeout(e._t);e._t=setTimeout(()=>e.className="",3500);
+}
+function switchTab(id,el){
+  document.querySelectorAll(".tab").forEach(t=>t.classList.remove("active"));
+  document.querySelectorAll(".panel").forEach(p=>p.classList.remove("active"));
+  el.classList.add("active");
+  document.getElementById("panel-"+id).classList.add("active");
+}
+function escHtml(s){
+  return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");
+}
+
+// init
+loadStats();
+</script>
+</body>
+</html>
